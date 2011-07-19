@@ -34,9 +34,16 @@ let sample_qstar () =
 let generate_rewards qs = 
   Array.init n_arms (fun _ -> (Gsl_randist.gaussian rng ~sigma:1.0) +. qs) 
 
+let action_val_init value = 
+  Array.init n_arms (fun _ -> value)
+
 (** Default initialization of action values. *)
-let initialize_action_values () = 
-  Array.init n_arms (fun _ -> 0.0)
+let default_action_val_init () = 
+  action_val_init 0.0
+
+(** Optimistic initialization of action values. *)
+let optimistic_action_val_init () = 
+  action_val_init 5.0 
 
 (** Get the max value and index of the max value in an array *)
 let array_max_idx a = 
@@ -45,29 +52,40 @@ let array_max_idx a =
   (!m, !ix)
 
 (** A single play. *)
-let play r q k = 
+let play k r q a = 
   let qmax, ix = array_max_idx q in   (* greedy action selection *)
   let rkp1 = r.(ix) in
+  a.(ix) <- a.(ix) + 1;
   q.(ix) <- q.(ix) +. (1.0 /. ((float k) +. 1.0)) *. (rkp1 -. q.(ix)) (* incremental update *)
   
-(** Print an array *)
-let print_array a = 
+(* Print an array *)
+
+let print_float_array a = 
   let l = Array.length a in
   for i = 0 to l - 2 do
     Printf.printf "%f, " a.(i)
   done; 
   Printf.printf "%f\n" a.(l-1)
 
+let print_int_array a = 
+  let l = Array.length a in
+  for i = 0 to l - 2 do
+    Printf.printf "%d, " a.(i)
+  done; 
+  Printf.printf "%d\n" a.(l-1)
+
 (** Initialize a task. *)
 let init_task () = 
   let qs = sample_qstar () in
   let r = generate_rewards qs in
-  let q = initialize_action_values () in
-  print_array r;
+  let q = optimistic_action_val_init () in
+  let acts = Array.init n_arms (fun _ -> 0) in
+  print_float_array r;
   for k = 1 to 1000 do
-    play r q k
+    play k r q acts 
   done;
-  print_array q
+  print_float_array q;
+  print_int_array acts
 
 (* small test *)
 let _ = 
